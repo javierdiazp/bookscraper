@@ -10,7 +10,7 @@ from bs4 import BeautifulSoup
 
 class Command(BaseCommand):
     path = 'http://books.toscrape.com/'
-    help = f'Obtiene las categorias y la informacion en detalle de los libros de {path}'
+    help = f'Get categories and detailed information of every book in {path}'
 
     def handle(self, *args, **options):
         try:
@@ -21,23 +21,29 @@ class Command(BaseCommand):
                 c.save()
 
                 while c_url:
-                    htmlparsed = get_html_parsed(c_url)
-                    books_url = get_books_url(c_url, htmlparsed)
-                    c_url = get_next_page(c_url, htmlparsed)
+                    try:
+                        htmlparsed = get_html_parsed(c_url)
+                    except HTTPError:
+                        c_url = None  # Skip rest of category on http error
+                    else:
+                        books_url = get_books_url(c_url, htmlparsed)
+                        c_url = get_next_page(c_url, htmlparsed)
 
-                    for b_url in books_url:
-                        book = get_book_detail(b_url)
-                        b = Book(category=c, **book)
-                        b.save()
+                        for b_url in books_url:
+                            try:
+                                book_detail = get_book_detail(b_url)
+                            except HTTPError:
+                                pass  # Skip book on http error
+                            else:
+                                b = Book(category=c, **book_detail)
+                                b.save()
 
-                print(f'Categoria {c_name} analizada')
+                self.stdout.write(f'Category {c_name} successfully scraped')
 
-        except HTTPError as http_err:
-            raise CommandError(f'Http Request Error: {http_err}')
         except Exception as err:
             raise CommandError(f'Error: {err}')
         else:
-            self.stdout.write(self.style.SUCCESS('Scraping finalizado correctamente'))
+            self.stdout.write(self.style.SUCCESS('Scraping completed'))
 
 
 def get_html_parsed(url):
@@ -82,12 +88,14 @@ def get_book_detail(url):
 
     soup = BeautifulSoup(response.text, 'html.parser')
 
-    # Seccion 'Product Main'
+    # 'Product Main' Section
     product_main = soup.find(class_='product_main')
     if product_main:
         title = product_main.find('h1')
         if title:
             title = title.string
+        else:
+            raise HTTPError  # Storing a no named book has no meaning
 
         price = product_main.find(class_='price_color')
         if price:
@@ -96,9 +104,9 @@ def get_book_detail(url):
         stock = product_main.find('i', class_='icon-ok')
         stock = stock is not None
     else:
-        title = price = stock = None
+        raise HTTPError
 
-    # Seccion 'Product Description'
+    # 'Product Description' Section
     product_description = soup.find(id='product_description')
     if product_description:
         description = product_description.find_next_sibling('p')
@@ -107,10 +115,11 @@ def get_book_detail(url):
     else:
         description = None
 
-    # Otros
+    # Others
     thumbnail = soup.find(class_='thumbnail')
     if thumbnail:
         thumbnail = thumbnail.find('img').get('src')
+        thumbnail = urljoin(url, thumbnail)
 
     upc = soup.find('th', string='UPC')
     if upc:

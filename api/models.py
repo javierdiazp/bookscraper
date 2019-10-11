@@ -11,11 +11,11 @@ class Category(models.Model):
 class Book(models.Model):
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
     title = models.CharField(max_length=100)
-    thumbnail_url = models.CharField(max_length=200)
-    price = models.DecimalField(max_digits=6, decimal_places=2)
-    stock = models.BooleanField(default=False)
-    product_description = models.CharField(max_length=200)
-    upc = models.CharField(max_length=30)
+    thumbnail_url = models.CharField(max_length=200, blank=True)
+    price = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    stock = models.BooleanField(default=False, blank=True)
+    product_description = models.CharField(max_length=200, blank=True)
+    upc = models.CharField(max_length=30, blank=True)
 
     def __str__(self):
         return self.title

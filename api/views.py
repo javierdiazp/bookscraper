@@ -4,12 +4,12 @@ from api.serializers import CategorySerializer, BookSerializer
 
 
 class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
-    """ Lista de categorias """
-    queryset = Category.objects.all()
+    """ Categorias de libros """
+    queryset = Category.objects.all().order_by('id')
     serializer_class = CategorySerializer
 
 
 class BookViewSet(viewsets.ReadOnlyModelViewSet):
-    """ Lista de libros """
-    queryset = Book.objects.all()
+    """ Libros de la web http://books.toscrape.com """
+    queryset = Book.objects.all().order_by('id')
     serializer_class = BookSerializer

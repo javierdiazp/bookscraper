@@ -9,7 +9,7 @@ class Category(models.Model):
 
 
 class Book(models.Model):
-    category_id = models.ForeignKey(Category, on_delete=models.CASCADE)
+    category = models.ForeignKey(Category, on_delete=models.CASCADE)
     title = models.CharField(max_length=100)
     thumbnail_url = models.CharField(max_length=200)
     price = models.DecimalField(max_digits=6, decimal_places=2)

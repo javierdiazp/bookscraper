@@ -1,12 +1,11 @@
 from django.core.management.base import BaseCommand, CommandError
 from api.models import Category, Book
 
+import re
 import requests
 from requests.exceptions import HTTPError
 from requests.compat import urljoin
 from bs4 import BeautifulSoup
-
-import re
 
 
 class Command(BaseCommand):
@@ -22,15 +21,16 @@ class Command(BaseCommand):
                 c.save()
 
                 while c_url:
-                    # print(c_url)
                     htmlparsed = get_html_parsed(c_url)
                     books_url = get_books_url(c_url, htmlparsed)
                     c_url = get_next_page(c_url, htmlparsed)
 
                     for b_url in books_url:
                         book = get_book_detail(b_url)
-                        b = Book(category_id=c, **book)
+                        b = Book(category=c, **book)
                         b.save()
+
+                print(f'Categoria {c_name} analizada')
 
         except HTTPError as http_err:
             raise CommandError(f'Http Request Error: {http_err}')
@@ -70,7 +70,7 @@ def get_books_url(baseurl, htmlparsed):
 def get_next_page(baseurl, htmlparsed):
     nextpage = htmlparsed.find('li', class_='next')
     if nextpage is None:
-        return ""
+        return None
     else:
         href = nextpage.find('a').get('href')
         return urljoin(baseurl, href)
@@ -82,18 +82,45 @@ def get_book_detail(url):
 
     soup = BeautifulSoup(response.text, 'html.parser')
 
-    title = soup.find(class_='product_main').find('h1')
-    thumbnail = soup.find(class_='thumbnail').find('img')
-    price = title.find_next_sibling('p')
-    stock = price.find_next_sibling('p').find('i', class_='icon-ok')
-    description = soup.find(id='product_description').find_next_sibling('p')
-    upc = soup.find('th', string='UPC').find_next_sibling('td')
+    # Seccion 'Product Main'
+    product_main = soup.find(class_='product_main')
+    if product_main:
+        title = product_main.find('h1')
+        if title:
+            title = title.string
+
+        price = product_main.find(class_='price_color')
+        if price:
+            price = float(re.findall(r'\d+\.\d+', price.string)[0])
+
+        stock = product_main.find('i', class_='icon-ok')
+        stock = stock is not None
+    else:
+        title = price = stock = None
+
+    # Seccion 'Product Description'
+    product_description = soup.find(id='product_description')
+    if product_description:
+        description = product_description.find_next_sibling('p')
+        if description:
+            description = description.string
+    else:
+        description = None
+
+    # Otros
+    thumbnail = soup.find(class_='thumbnail')
+    if thumbnail:
+        thumbnail = thumbnail.find('img').get('src')
+
+    upc = soup.find('th', string='UPC')
+    if upc:
+        upc = upc.find_next_sibling('td').string
 
     return {
         'title': title.string,
-        'thumbnail_url': thumbnail.get('src'),
-        'price': float(re.findall("\d+\.\d+", price.string)[0]),
-        'stock': stock is not None,
-        'product_description': description.string,
-        'upc': upc.string
+        'thumbnail_url': thumbnail,
+        'price': price,
+        'stock': stock,
+        'product_description': description,
+        'upc': upc
     }

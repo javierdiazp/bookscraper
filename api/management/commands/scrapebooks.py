@@ -6,6 +6,7 @@ import requests
 from requests.exceptions import HTTPError
 from requests.compat import urljoin
 from bs4 import BeautifulSoup
+from concurrent.futures import ThreadPoolExecutor
 
 
 class Command(BaseCommand):
@@ -15,35 +16,37 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         try:
             categories = get_categories(self.path)
-            for category in categories:
-                c_name, c_url = category
-                c = Category(name=c_name)
-                c.save()
-
-                while c_url:
-                    try:
-                        htmlparsed = get_html_parsed(c_url)
-                    except HTTPError:
-                        c_url = None  # Skip rest of category on http error
-                    else:
-                        books_url = get_books_url(c_url, htmlparsed)
-                        c_url = get_next_page(c_url, htmlparsed)
-
-                        for b_url in books_url:
-                            try:
-                                book_detail = get_book_detail(b_url)
-                            except HTTPError:
-                                pass  # Skip book on http error
-                            else:
-                                b = Book(category=c, **book_detail)
-                                b.save()
-
-                self.stdout.write(f'Category {c_name} successfully scraped')
-
+            with ThreadPoolExecutor() as executor:
+                executor.map(self.thread_scrape_category, categories)
         except Exception as err:
             raise CommandError(f'Error: {err}')
         else:
             self.stdout.write(self.style.SUCCESS('Scraping completed'))
+
+    def thread_scrape_category(self, category):
+        c_name, c_url = category
+        c = Category(name=c_name)
+        c.save()
+
+        while c_url:
+            try:
+                htmlparsed = get_html_parsed(c_url)
+            except HTTPError:
+                c_url = None  # Skip rest of category on http error
+            else:
+                books_url = get_books_url(c_url, htmlparsed)
+                c_url = get_next_page(c_url, htmlparsed)
+
+                for b_url in books_url:
+                    try:
+                        book_detail = get_book_detail(b_url)
+                    except HTTPError:
+                        pass  # Skip book on http error
+                    else:
+                        b = Book(category=c, **book_detail)
+                        b.save()
+
+        self.stdout.write(f'Category {c_name} successfully scraped')
 
 
 def get_html_parsed(url):
@@ -55,7 +58,7 @@ def get_html_parsed(url):
 def get_categories(url):
     soup = get_html_parsed(url)
     category_tags = soup.find(class_='side_categories').find_all('a')
-    category_tags.pop(0)
+    category_tags.pop(0)  # First element is ignored (link to homepage)
 
     categories = []
 
@@ -86,6 +89,7 @@ def get_book_detail(url):
     response = requests.get(url)
     response.raise_for_status()
 
+    book_detail = {}
     soup = BeautifulSoup(response.text, 'html.parser')
 
     # 'Product Main' Section
@@ -94,15 +98,18 @@ def get_book_detail(url):
         title = product_main.find('h1')
         if title:
             title = title.string
+            book_detail['title'] = title
         else:
             raise HTTPError  # Storing a no named book has no meaning
 
         price = product_main.find(class_='price_color')
         if price:
             price = float(re.findall(r'\d+\.\d+', price.string)[0])
+            book_detail['price'] = price
 
         stock = product_main.find('i', class_='icon-ok')
         stock = stock is not None
+        book_detail['stock'] = stock
     else:
         raise HTTPError
 
@@ -112,24 +119,18 @@ def get_book_detail(url):
         description = product_description.find_next_sibling('p')
         if description:
             description = description.string
-    else:
-        description = None
+            book_detail['product_description'] = description
 
     # Others
     thumbnail = soup.find(class_='thumbnail')
     if thumbnail:
         thumbnail = thumbnail.find('img').get('src')
         thumbnail = urljoin(url, thumbnail)
+        book_detail['thumbnail_url'] = thumbnail
 
     upc = soup.find('th', string='UPC')
     if upc:
         upc = upc.find_next_sibling('td').string
+        book_detail['upc'] = upc
 
-    return {
-        'title': title.string,
-        'thumbnail_url': thumbnail,
-        'price': price,
-        'stock': stock,
-        'product_description': description,
-        'upc': upc
-    }
+    return book_detail

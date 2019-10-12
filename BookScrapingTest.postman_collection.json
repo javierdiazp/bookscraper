@@ -1,0 +1,162 @@
+{
+	"info": {
+		"_postman_id": "c91b1a4e-0c56-4d40-9335-34c4191d1d96",
+		"name": "BookScrapingTest",
+		"description": "Algunas consultas de prueba para la API de BookScraping",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Get Token",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"id": "75e3dabd-2702-4d53-8f07-b5faabd7e10a",
+						"exec": [
+							"var data = pm.response.json();",
+							"pm.globals.set('token', data.token);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "username",
+							"value": "admin",
+							"type": "text"
+						},
+						{
+							"key": "password",
+							"value": "k14v3123",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "{{url}}/api-token-auth/",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"api-token-auth",
+						""
+					]
+				},
+				"description": "Obtiene un token para el usuario admin"
+			},
+			"response": []
+		},
+		{
+			"name": "Test List of Categories",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Token {{token}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{url}}/category/",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"category",
+						""
+					]
+				},
+				"description": "Obtiene la lista de categorías de libros"
+			},
+			"response": []
+		},
+		{
+			"name": "Test List of Books",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Token {{token}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{url}}/book",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"book"
+					]
+				},
+				"description": "Obtiene la lista de libros"
+			},
+			"response": []
+		},
+		{
+			"name": "Test Detail of Book",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Token {{token}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{url}}/book/889",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"book",
+						"889"
+					]
+				},
+				"description": "Obtiene el detalle de un libro por su id"
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"id": "742eeed5-d667-49f7-b3c1-83bc2bb4ce78",
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"id": "5730d344-d2d4-4bae-9308-bbb22b39b4ce",
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"id": "beb4e171-17b9-4112-b8e7-f1fec7a12306",
+			"key": "url",
+			"value": "http://127.0.0.1:8000",
+			"type": "string"
+		}
+	],
+	"protocolProfileBehavior": {}
+}

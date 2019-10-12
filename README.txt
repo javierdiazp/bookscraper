@@ -12,11 +12,12 @@ manera concurrente por medio de ThreadPoolExecutor (Python 3.7+)
 
 2. API ENDPOINTS
   Se provee de un archivo de colección para ejecutar algunas pruebas en Postman
+  (BookScrapingTest.postman_collection.json)
 
   2a. api-token-auth/
     Autenticacion por token.
     Para obtener un token se debe ejecutar un POST con campos username y password válidos
-    Para efectos de testing se suministra el usuario siguiente: username=admin password=k14v3123
+    Para efectos de testing se suministra el usuario siguiente: username=admin password=clave123
 
   2b. book/
     Retorna una lista paginada con los libros scrapeados

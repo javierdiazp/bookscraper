@@ -52,6 +52,7 @@ class Command(BaseCommand):
 def get_html_parsed(url):
     response = requests.get(url)
     response.raise_for_status()
+    response.encoding = 'utf-8'
     return BeautifulSoup(response.text, 'html.parser')
 
 
@@ -88,6 +89,7 @@ def get_next_page(baseurl, htmlparsed):
 def get_book_detail(url):
     response = requests.get(url)
     response.raise_for_status()
+    response.encoding = 'utf-8'
 
     book_detail = {}
     soup = BeautifulSoup(response.text, 'html.parser')
